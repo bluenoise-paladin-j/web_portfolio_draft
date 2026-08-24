@@ -143,21 +143,36 @@ body {
   overflow-x: hidden;          /* marquees bleed off both edges */
 }
 
-/* A page's background propagates to the whole canvas, including any
-   strip the browser exposes below the content — when the chrome
-   retracts on a scrolling page, or in an overscroll bounce.
+/* The strip the browser exposes past either end of the page — an
+   overscroll bounce, or the chrome retracting on a scrolling page.
 
-   Painting each page in the colour of its own LAST band means that
-   strip reads as the band bleeding off the bottom rather than as the
-   page running out. Pair each with the <meta name="theme-color"> in
-   that page's head, which tints Safari's toolbar the same, so the
-   chrome stops looking bolted on.
+   The two ends want different colours, because the two ends of the
+   page are different colours: above Home is its white name band,
+   below it the red statement. One background-color cannot do that,
+   so this is a colour plus an image:
 
-   If the address bar sits at the TOP of the window rather than the
-   bottom, swap both to the colour of the FIRST band instead. */
-body.home  { background: var(--red); }    /* the statement band */
-body.works { background: var(--red); }    /* project 05 */
-body.about { background: var(--white); }  /* the INSTAGRAM band */
+     background-color  paints the ENTIRE canvas, so it covers the
+                       strip below the page  -> the LAST band's colour
+     background-image  a solid block parked 3000px above the origin,
+                       covering the strip above -> the FIRST band's
+
+   It has to go on <html>: a background set here becomes the canvas,
+   and only one element's does. The page classes are on <body>, hence
+   :has() to read them from above.
+
+   Set both ends to the same colour and it behaves exactly as a plain
+   background would. */
+html {
+  background-color: var(--edge-foot, var(--white));
+  background-image: linear-gradient(var(--edge-head, var(--white)),
+                                    var(--edge-head, var(--white)));
+  background-repeat: no-repeat;
+  background-position: 0 -3000px;
+  background-size: 100% 3000px;
+}
+html:has(body.home)  { --edge-head: var(--white); --edge-foot: var(--red);   }
+html:has(body.works) { --edge-head: var(--black); --edge-foot: var(--red);   }
+html:has(body.about) { --edge-head: var(--white); --edge-foot: var(--white); }
 
 a { color: inherit; text-decoration: none; }
 
@@ -203,37 +218,63 @@ a { color: inherit; text-decoration: none; }
    if the script hasn't run yet. */
 .band--link {
   cursor: pointer;
-  transform-origin: 50% 50%;
-  will-change: transform;
-  transition:
-    background .2s ease,
-    color .2s ease,
-    transform var(--swell-out);
+  transition: background .2s ease, color .2s ease;
 }
-.band--link:hover,
 .band--link:focus-visible {
   background: var(--fg);
   color: var(--bg);
   outline: none;
-  z-index: 2;
-  transform: scaleY(var(--sy, 1.05));
-  transition:
-    background .2s ease,
-    color .2s ease,
-    transform var(--swell-in);
 }
 
-/* The bottom band on Works and About sits on the bottom edge of
-   the window. Growing down from the centre would push a scrollbar
-   into existence and shift the page, so grow those upward only. */
-.about .band--link:last-of-type,
-.works .project:last-of-type .project__band { transform-origin: 50% 100%; }
+/* Everything to do with the swell lives in here — the promoted layer,
+   the transform transition, the scale, the hover inversion. It is a
+   real-pointer, wide-window effect and nothing else should carry any
+   of its cost.
+
+   will-change is the reason this matters rather than being tidiness.
+   It pins every band to its own compositor layer permanently, and each
+   of those layers clips a marquee animating inside it. On iOS that was
+   enough to make bands intermittently repaint into their hover state
+   while you were just looking at the page. Declaring it for an effect
+   that cannot fire was buying the bug for nothing.
+
+   min-width as well as hover: an iPad with a trackpad reports a real
+   pointer, and the effect was never designed at that size. */
+@media (hover: hover) and (min-width: 1025px) {
+  .band--link {
+    transform-origin: 50% 50%;
+    will-change: transform;
+    transition:
+      background .2s ease,
+      color .2s ease,
+      transform var(--swell-out);
+  }
+  .band--link:hover,
+  .band--link:focus-visible {
+    background: var(--fg);
+    color: var(--bg);
+    outline: none;
+    z-index: 2;
+    transform: scaleY(var(--sy, 1.05));
+    transition:
+      background .2s ease,
+      color .2s ease,
+      transform var(--swell-in);
+  }
+
+  /* The bottom band on Works and About sits on the bottom edge of
+     the window. Growing down from the centre would push a scrollbar
+     into existence and shift the page, so grow those upward only. */
+  .about .band--link:last-of-type,
+  .works .project:last-of-type .project__band { transform-origin: 50% 100%; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .band--link,
   .band--link:hover,
   .band--link:focus-visible {
     transform: none;
+    will-change: auto;
     transition: background .2s ease, color .2s ease;
   }
 }
@@ -284,10 +325,13 @@ a { color: inherit; text-decoration: none; }
   display: inline-flex;
   position: relative;
   top: var(--shift, 0px);              /* set by main.js */
-  will-change: transform;
   animation: slide linear infinite;
   animation-duration: var(--dur, 20s); /* set by main.js */
 }
+/* No will-change here. A running transform animation is composited
+   anyway, so it bought nothing — and six permanently promoted layers,
+   each clipped by its band, is exactly the load that makes iOS repaint
+   erratically. */
 
 .marquee__half { display: flex; flex: none; }
 
@@ -564,20 +608,6 @@ a { color: inherit; text-decoration: none; }
 /* ---- Tablet — 1024 and down ---------------------------- */
 @media (max-width: 1024px) {
 
-  /* No hover below this width, whatever the device says it can do.
-     @media (hover: none) further down catches touch screens, but an
-     iPad with a trackpad reports hover and would still swell and
-     invert — and at these sizes the effect was never designed in.
-
-     :focus-visible keeps the inversion, without the swell: it is the
-     only thing telling a keyboard or switch user where they are. */
-  .band--link:hover {
-    transform: none;
-    background: var(--bg);
-    color: var(--fg);
-  }
-  .band--link:focus-visible { transform: none; }
-
   /* Home leans taller: the name band grows and ABOUT gives way.
      That is what keeps the QR square from swallowing the frame —
      34.5vh of a 1194-tall window would be 412px across an 834-wide
@@ -623,29 +653,23 @@ a { color: inherit; text-decoration: none; }
   .panel__media { overflow: hidden; }
   .ph           { flex: 0 0 100%; height: 320px; }
 
-  /* The About page fits the viewport exactly at 402 wide, but only
-     just — the statement is what absorbs the slack and at this size
-     there is barely any. Tighter leading on the second paragraph and
-     less padding under the credit buy back about 27px, which is the
-     difference between fitting and a 19px scroll that clips the
-     bottom band. Narrower than 402 it will scroll, which is fine. */
+  /* About is the one page whose height is not fixed — the statement
+     absorbs whatever the bands leave, and on a phone that is not much.
+     These sizes are set against the SMALL viewport, so the whole page
+     lands inside what you can actually see with Safari's chrome up.
+
+     Measured with the chrome showing: 402x794 leaves 50px spare,
+     390x750 leaves 33px. An SE at 375x629 still scrolls — nothing
+     legible fits that, and scrolling a little is the right answer
+     there rather than shrinking the copy further for everyone. */
   .statement           { padding-bottom: 14px; }
-  .statement__text     { font-size: 22px; }
-  .statement__text--sm { font-size: 17px; line-height: 1.08; }
-  .statement__credit   { font-size: 32px; }
+  .statement__text     { font-size: 20px; }
+  .statement__text--sm { font-size: 15px; line-height: 1.08; }
+  .statement__credit   { font-size: 28px; }
 }
 
 
-/* ---- Touch ---------------------------------------------
-   Not a width question. On a touch screen :hover latches after a
-   tap and never clears — tap a band, come back, and it is still
-   inverted and still swollen.
-   -------------------------------------------------------- */
-@media (hover: none) {
-  .band--link:hover,
-  .band--link:focus-visible {
-    transform: none;
-    background: var(--bg);
-    color: var(--fg);
-  }
-}
+/* No touch override needed any more. The hover rules only exist inside
+   @media (hover: hover), so a touch screen never picks them up in the
+   first place — and the old block here was also cancelling the focus
+   state, which is the one thing a keyboard or switch user has. */
