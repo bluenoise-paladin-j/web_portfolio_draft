@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jared Amuso — About</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<!-- ABOUT — like Home and Works, the page is sized off the viewport:
+     the bands take vh-derived heights and the statement in the middle
+     absorbs whatever is left, so the CONTACT / EMAIL / INSTAGRAM group
+     always sits on the bottom edge. -->
+<body class="about">
+
+  <a href="index.html" class="band band--link strip" style="--bg:var(--black); --fg:var(--white); --ff:var(--f-aptima);">
+    <span class="marquee">HOME</span>
+  </a>
+
+  <div class="band" style="--h:var(--h-title); --bg:var(--blue); --fg:var(--white); --ff:var(--f-swiss);">
+    <span class="marquee">ABOUT</span>
+  </div>
+
+  <div class="band" style="--h:var(--h-tag); --bg:var(--red); --fg:var(--white); --ff:var(--f-swiss);">
+    <span class="marquee" data-dir="rtl">INTERACTION + INSTALLATION + MOTION</span>
+  </div>
+
+  <!-- Arial, and no top padding — it sits hard under the band above.
+       This section is the flex child that grows: every pixel the bands
+       below don't take ends up here. -->
+  <section class="statement">
+    <p class="statement__text">
+      Through process-driven experimentation in interactive media and virtual
+      environments, my work explores how digital systems can generate meaningful
+      affective experiences.
+    </p>
+    <p class="statement__text statement__text--sm">
+      Moving forward with my practise, I aim to deepen my focus on regenerative
+      design, exploring how interactivity and digital environments can cultivate
+      renewal, connection, and care within both viewers and systems.
+    </p>
+  </section>
+
+  <div class="band" style="--h:var(--h-contact); --bg:var(--black); --fg:var(--white); --ff:var(--f-swiss);">
+    <span class="marquee">CONTACT</span>
+  </div>
+
+  <a href="mailto:hello@jaredamuso.com" class="band band--link" style="--h:var(--h-social); --fill:0.8; --bg:var(--white); --fg:var(--red); --ff:var(--f-swiss);">
+    <span class="marquee" data-dir="rtl">EMAIL</span>
+  </a>
+
+  <a href="https://instagram.com/" class="band band--link" style="--h:var(--h-social); --fill:0.8; --bg:var(--white); --fg:var(--blue); --ff:var(--f-swiss);">
+    <span class="marquee">INSTAGRAM</span>
+  </a>
+
+  <aside class="qr"><img src="img/qr.svg" alt="QR code"></aside>
+
+<script src="js/main.js"></script>
+</body>
+</html>

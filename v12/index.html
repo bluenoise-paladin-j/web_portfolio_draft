@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jared Amuso — Home</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<!-- HOME — five bands filling the viewport.
+     --grow sets each band's share of the height,
+     --bg / --fg its colours, --ff its typeface. -->
+<body class="home">
+
+  <div class="band" style="--grow:26; --bg:var(--white); --fg:var(--black); --ff:var(--f-jamai);">
+    <span class="marquee">JARED AMUSO</span>
+  </div>
+
+  <a href="works.html" class="band band--link" style="--grow:40; --bg:var(--red); --fg:var(--white); --ff:var(--f-swiss);">
+    <span class="marquee" data-dir="rtl">WORKS</span>
+  </a>
+
+  <a href="about.html" class="band band--link" style="--grow:24; --bg:var(--blue); --fg:var(--white); --ff:var(--f-bandit);">
+    <span class="marquee">ABOUT</span>
+  </a>
+
+  <div class="band" style="--grow:5; --bg:var(--white); --fg:var(--red); --ff:var(--f-swiss);">
+    <span class="marquee" data-dir="rtl">INTERACTION + INSTALLATION + MOTION</span>
+  </div>
+
+  <div class="band" style="--grow:5; --bg:var(--red); --fg:var(--green); --ff:var(--f-swiss);">
+    <span class="marquee">THROUGH PROCESS-DRIVEN EXPERIMENTATION IN INTERACTIVE MEDIA AND VIRTUAL ENVIRONMENTS, MY WORK EXPLORES HOW DIGITAL SYSTEMS CAN GENERATE MEANINGFUL AFFECTIVE EXPERIENCES.</span>
+  </div>
+
+  <aside class="qr"><img src="img/qr.svg" alt="QR code"></aside>
+
+<script src="js/main.js"></script>
+</body>
+</html>

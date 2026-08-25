@@ -1,0 +1,428 @@
+/* =========================================================
+   v10 — Jared Amuso, A2 responsive portfolio
+   Desktop only. Palette SH_1. Six typefaces from curated1.
+
+   Structure of this file:
+     1. Fonts
+     2. Tokens (colour, type, timing)
+     3. Reset + page
+     4. Band — the one repeated element the whole site is made of
+     5. Marquee
+     6. Home
+     7. Works + expanding panel
+     8. About
+     9. QR
+   ========================================================= */
+
+
+/* ---- 1. Fonts ------------------------------------------
+   Loaded off disk, no network. All six are Latin-1 only:
+   no arrows, stars or block characters exist in them — those
+   fall back to a system font. Punctuation that DOES work:
+   . , / \ | + - # & ' " % ( ) : ; ! ? and « » • · — –
+   -------------------------------------------------------- */
+@font-face { font-family: "Bandit";  src: url("../fonts/VBANDIT.TTF"); font-display: block; }
+@font-face { font-family: "Swiss";   src: url("../fonts/VSWISEC.TTF"); font-display: block; }
+@font-face { font-family: "Jamai";   src: url("../fonts/VJAMAI.TTF");  font-display: block; }
+@font-face { font-family: "Auchon";  src: url("../fonts/VAUCHON.TTF"); font-display: block; }
+@font-face { font-family: "Avo";     src: url("../fonts/VAVOB.TTF");   font-display: block; }
+@font-face { font-family: "Aptima";  src: url("../fonts/VAPTIMB.TTF"); font-display: block; }
+
+
+/* ---- 2. Tokens ----------------------------------------- */
+:root {
+  /* Palette, sampled from the guides in guides/3 */
+  --blue:   #052BFF;
+  --green:  #2CF855;
+  --red:    #F21A06;
+  --white:  #FBFCF9;    /* off-white, faint green cast */
+  --black:  #000000;
+  --grey:   #6D7074;    /* panel description copy — 4.8:1 on --white */
+  --media:  #212326;    /* the placeholder block in an open panel */
+
+  /* Typefaces. Set a band's face with --ff — see fonts.html. */
+  --f-jamai:  "Jamai",  sans-serif;   /* fat casual italic — your name */
+  --f-swiss:  "Swiss",  sans-serif;   /* condensed bold    — most bands */
+  --f-bandit: "Bandit", sans-serif;   /* heavy slanted     — Home ABOUT, project 02 */
+  --f-aptima: "Aptima", sans-serif;   /* lighter grotesque — strips, project 03 */
+  --f-avo:    "Avo",    sans-serif;   /* wide grotesque    — project 04 */
+  --f-auchon: "Auchon", sans-serif;   /* bold condensed    — project 05 */
+
+  /* Body copy — the About statement and the project details and
+     description. Arial regular: the display faces stop being
+     readable much below 20px. */
+  --f-body: Arial, Helvetica, sans-serif;
+
+  /* Marquee. Speed is px per second. Drift varies it per band
+     by roughly +/- this fraction, so the stack falls out of
+     step with itself instead of marching. 0 = all identical. */
+  --marquee-speed: 90;
+  --marquee-drift: 0.14;
+
+  /* NOTE two pairings measure below 3:1 — green on red (Home
+     statement) and green on red (project 05), both 2.98. They read
+     as deliberate vibration at display size, but they are the
+     weakest things on the site.
+
+     How much of a band's height the capitals take. Above 1 they
+     overshoot and clip at both edges, which is the look — it kills
+     the uneven gaps a letter's own sidebearings leave behind.
+     Override per band with an inline --fill. */
+  --fill: 1.10;
+
+  /* Shared sizes */
+  --strip-h: max(38px, 5vh);   /* the thin HOME strip */
+  --qr-size: 208px;
+
+  /* Hover swell. A link band grows this many pixels taller under
+     the pointer. It's a pixel amount, not a scale: main.js divides
+     it by each band's own height so the 38px strip and the 410px
+     WORKS band travel the same distance. Turn the whole effect off
+     by setting it to 0. */
+  --swell: 12px;
+
+  /* In overshoots past the target and settles back; out eases home
+     without a bounce. Swap --swell-out for the same curve as
+     --swell-in if you want it to squash on the way out too. */
+  --swell-in:  .58s cubic-bezier(.34, 2.20, .50, 1);
+  --swell-out: .50s cubic-bezier(.22, 1.00, .36, 1);
+}
+
+
+/* ---- 3. Reset + page ----------------------------------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* overscroll-behavior kills the elastic bounce past the top and
+   bottom of the page. It has to sit on <html>, not <body> — the
+   document root is the scrolling element. */
+html { overscroll-behavior: none; }
+
+body {
+  background: var(--white);
+  color: var(--black);
+  overflow-x: hidden;          /* marquees bleed off both edges */
+}
+
+a { color: inherit; text-decoration: none; }
+
+
+/* ---- 4. Band -------------------------------------------
+   Every page is a stack of these. A band owns its height and
+   does the clipping; main.js sizes the type inside so the
+   capital letters exactly fill that height, then nudges the
+   line so they sit flush against both edges.
+
+   Each band sets its own --bg, --fg, --ff and --h inline.
+   -------------------------------------------------------- */
+.band {
+  --bg: var(--white);
+  --fg: var(--black);
+
+  display: block;
+  position: relative;
+  height: var(--h, 180px);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ff, var(--f-swiss));
+  overflow: hidden;
+}
+
+.strip { --h: var(--strip-h); --fill: 0.9; }   /* only the strips sit inside their band */
+
+/* Link bands invert on hover — fill and type swap places.
+   No buttons, no underlines: the band is the affordance.
+
+   They also swell vertically. scaleY rather than height on
+   purpose: height would relayout the whole stack sixty times a
+   second, scaleY is a compositor job and costs nothing. The
+   trade is that the band overlaps its neighbours instead of
+   pushing them — which is the look, it reads as the band lifting
+   off the stack. z-index puts it over them while it's up.
+
+   Because the band clips its own type, scaling the band stretches
+   the capitals with it. That's deliberate — stretched signage type
+   is the whole reference.
+
+   --sy is written per band by main.js. The fallback only applies
+   if the script hasn't run yet. */
+.band--link {
+  cursor: pointer;
+  transform-origin: 50% 50%;
+  will-change: transform;
+  transition:
+    background .2s ease,
+    color .2s ease,
+    transform var(--swell-out);
+}
+.band--link:hover,
+.band--link:focus-visible {
+  background: var(--fg);
+  color: var(--bg);
+  outline: none;
+  z-index: 2;
+  transform: scaleY(var(--sy, 1.05));
+  transition:
+    background .2s ease,
+    color .2s ease,
+    transform var(--swell-in);
+}
+
+/* The bottom band on Works and About sits on the bottom edge of
+   the window. Growing down from the centre would push a scrollbar
+   into existence and shift the page, so grow those upward only. */
+.about .band--link:last-of-type,
+.works .project:last-of-type .project__band { transform-origin: 50% 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .band--link,
+  .band--link:hover,
+  .band--link:focus-visible {
+    transform: none;
+    transition: background .2s ease, color .2s ease;
+  }
+}
+
+/* Project bands are <button>s. Declare NOTHING about background,
+   colour or type here — this rule comes after .band, so anything
+   set would override --bg / --fg / --ff and silently break it. */
+.project__band {
+  width: 100%;
+  border: none;
+  text-align: left;
+  display: block;
+}
+
+
+/* ---- 5. Marquee ----------------------------------------
+   main.js fills each .marquee with two identical halves, then
+   slides the track -50%. When the first half has fully exited,
+   the second is sitting in the same place, so the loop is
+   invisible.
+   -------------------------------------------------------- */
+.marquee {
+  display: block;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 1;
+  /* no overflow here — it would clip the upward nudge.
+     .band does the clipping. */
+}
+
+.marquee__track {
+  display: inline-flex;
+  position: relative;
+  top: var(--shift, 0px);              /* set by main.js */
+  will-change: transform;
+  animation: slide linear infinite;
+  animation-duration: var(--dur, 20s); /* set by main.js */
+}
+
+.marquee__half { display: flex; flex: none; }
+
+/* Gap between repeats. These faces have almost no word space of
+   their own, so the spacing is set here rather than with spaces. */
+.marquee__word { margin-right: .3em; }
+
+@keyframes slide {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.marquee[data-dir="rtl"] .marquee__track { animation-direction: reverse; }
+
+
+/* ---- 6. Home -------------------------------------------
+   Five bands filling the viewport exactly. flex-grow weights
+   rather than heights, so they always add up to 100%.
+   -------------------------------------------------------- */
+.home {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+.home .band { flex: var(--grow, 1) 1 0; }
+
+
+/* ---- 7. Works ------------------------------------------
+   Like Home, the closed stack fills the viewport: the strip
+   takes its height and the five bands share what's left.
+   Drag the window taller or shorter and the type rescales.
+
+   Heights are declared here, not as flex weights, so the bands
+   stay in normal document flow — that's what lets an opening
+   panel push the bands below it down the page. Flex would have
+   fought the panel for space.
+
+   max() sets a floor so bands stay legible on a short window;
+   below about 530px tall the page starts scrolling instead.
+   -------------------------------------------------------- */
+.works {
+  --stack: calc(100vh - var(--strip-h));
+  --h1: max(88px,  calc(var(--stack) * 0.185));
+  --h2: max(80px,  calc(var(--stack) * 0.163));
+  --h3: max(90px,  calc(var(--stack) * 0.190));
+  --h4: max(120px, calc(var(--stack) * 0.283));
+  --h5: max(86px,  calc(var(--stack) * 0.179));
+}
+
+/* The expanding panel.
+   height:auto can't be animated but grid-template-rows can:
+   0fr closed, 1fr open. The panel sits in normal flow, so
+   opening it pushes every band below it down. */
+.panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .55s cubic-bezier(.4, 0, .2, 1);
+  background: var(--white);
+}
+.panel__inner {
+  overflow: hidden;   /* required — hides the content while closed */
+  min-height: 0;      /* required — lets the row actually reach 0 */
+}
+.project[data-open="true"] .panel { grid-template-rows: 1fr; }
+
+/* clears the strip when an opened band scrolls into view */
+.project { scroll-margin-top: var(--strip-h); }
+
+/* One dark media strip across the full width, split into three
+   equal frames — same tone throughout, only a hairline X marking
+   each, so it reads as one block of media not three swatches. */
+.panel__media { display: flex; }
+.ph {
+  flex: 1;
+  height: 430px;
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - .75px), rgba(255,255,255,.55) calc(50% - .75px), rgba(255,255,255,.55) calc(50% + .75px), transparent calc(50% + .75px)),
+    linear-gradient(to bottom left,  transparent calc(50% - .75px), rgba(255,255,255,.55) calc(50% - .75px), rgba(255,255,255,.55) calc(50% + .75px), transparent calc(50% + .75px)),
+    var(--media);
+}
+
+/* Details flush left; description starts on the seam between the
+   first and second frame. No gutter — the text aligns to the media. */
+.panel__text {
+  display: flex;
+  padding: 0 0 44px;
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.32;
+  color: var(--black);
+}
+.panel__details { flex: 0 0 33.333%; padding-right: 24px; }
+.panel__details p + p { margin-top: 1.3em; }
+
+/* The project title, repeated here at the head of the details
+   column — the band above it is unreadable once it has scrolled
+   past. Nothing distinguishes it but position and the blank line
+   under it, which is how the current site does it. */
+.panel__name { margin-bottom: 1.3em; }
+
+/* Grey, and held to a measure. Left to fill the panel this column
+   runs about 150 characters a line, which is unreadable; 76ch puts
+   it near 90. The cap is on the text, not the layout, so it costs
+   nothing at narrower widths — delete the max-width if you'd rather
+   have the copy run full-bleed like the bands do. */
+.panel__desc {
+  flex: 1;
+  max-width: 76ch;
+  padding-right: 24px;
+  color: var(--grey);
+}
+.panel__desc p + p { margin-top: 1.3em; }
+
+/* A label inside a description — 'Strategy', 'Design', a statement
+   credit. No weight change, no size change: the break above it and
+   the tight gap below are the only things marking it, the way the
+   current site does it.
+
+   Both rules have to out-specify '.panel__desc p + p' above, which
+   is why they're written long. */
+.panel__desc .panel__label     { margin-top: 1.9em; }
+.panel__desc .panel__label + p { margin-top: .35em; }
+.panel__desc > :first-child    { margin-top: 0; }
+
+/* Exhibition and gallery links in the details column. Underlined,
+   because down here there's no band to act as the affordance. */
+.panel__details a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color .2s ease;
+}
+.panel__details a:hover { color: var(--red); }
+
+
+/* ---- 8. About ------------------------------------------
+   Everything flush to the left edge, no side padding.
+
+   Sized off the viewport the same way Works is: the strip takes
+   its height and the four bands take vh-derived shares of what's
+   left. The difference is the statement in the middle, which is
+   the one flex child that grows — so the CONTACT / EMAIL /
+   INSTAGRAM group is pushed onto the bottom edge of the window
+   and every spare pixel lands in the body copy instead.
+
+   min-height rather than height: a long statement or a short
+   window makes the page scroll instead of squashing the copy.
+
+   max() sets a floor so the bands stay legible on a short window;
+   below about 600px tall the page starts scrolling instead.
+   -------------------------------------------------------- */
+.about {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+
+  --stack:     calc(100vh - var(--strip-h));
+  --h-title:   max(110px, calc(var(--stack) * 0.192));   /* ABOUT */
+  --h-tag:     max(36px,  calc(var(--stack) * 0.059));   /* INTERACTION + ... */
+  --h-contact: max(100px, calc(var(--stack) * 0.177));   /* CONTACT */
+  --h-social:  max(66px,  calc(var(--stack) * 0.106));   /* EMAIL, INSTAGRAM */
+}
+.about .band { flex: none; }
+
+/* No top padding: the copy sits hard under the band above it,
+   the way the guides have it. The slack collects underneath the
+   last paragraph, between the copy and the CONTACT band. */
+.statement {
+  flex: 1 1 auto;
+  background: var(--white);
+  color: var(--black);
+  padding: 0 0 34px;
+}
+.statement__text {
+  font-family: var(--f-body);
+  font-size: 26px;
+  line-height: 1.38;
+  max-width: 99%;
+}
+/* The second paragraph is set down a step, as in the guides. */
+.statement__text--sm {
+  margin-top: 1.5em;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+
+/* ---- 9. QR ---------------------------------------------
+   Fixed to the viewport, hard into the bottom-right corner,
+   so it holds that spot however far the page scrolls.
+
+   pointer-events:none so it never intercepts a click — on
+   Works this corner sits over a project band. A QR is scanned,
+   not clicked.
+
+   The svg is cropped to its modules so it fills the square.
+   Note that removes the code's quiet zone: if you swap in a
+   real scannable code, either put the margin back in the file
+   or add padding to .qr.
+   -------------------------------------------------------- */
+.qr {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: var(--qr-size);
+  height: var(--qr-size);
+  z-index: 100;
+  pointer-events: none;
+}
+.qr img { display: block; width: 100%; height: 100%; }
